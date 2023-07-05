@@ -3,7 +3,6 @@
 #include <Ethernet.h>
 #include <PubSubClient.h>
 #include <Adafruit_MCP23X17.h>
-#include <PZEM004T.h>
 #include <ArduinoJson.h>
 #define MCP_HEAT 0
 #define MCP_COOL 1
@@ -15,9 +14,6 @@
 #define PIN_COMP_SENSE 26
 
 
-PZEM004T* pzemA;
-PZEM004T* pzemB;
-StaticJsonDocument<200> doc;
 Adafruit_MCP23X17 mcp;
 DHTNEW mySensor(22);
 
@@ -96,10 +92,6 @@ void setup() {
   delay(1500);
   lastReconnectAttempt = 0;
 
-  pzemA = new PZEM004T(&Serial1);
-  pzemA->setAddress(ip);
-  pzemB = new PZEM004T(&Serial2);
-  pzemB->setAddress(ip);
   for (int i=0; i<= 15; i++) {
     mcp.pinMode(i, OUTPUT);
     mcp.digitalWrite(i, LOW);
@@ -132,16 +124,6 @@ void loop() {
     int chk = mySensor.read();
     humidityRH = mySensor.getHumidity();
     tempF = ((mySensor.getTemperature() * 1.80) + 32.00);
-    float vA = pzemA->voltage(ip);
-    if (vA < 0.0) vA = 0.0;
-    float iA = pzemA->current(ip);
-    float pA = pzemA->power(ip);
-    float eA = pzemA->energy(ip);
-    float vB = pzemB->voltage(ip);
-    if (vB < 0.0) vB = 0.0;
-    float iB = pzemB->current(ip);
-    float pB = pzemB->power(ip);
-    float eB = pzemB->energy(ip);
 
 
     /** \brief handle switches
@@ -201,17 +183,6 @@ void loop() {
     client.publish("hvac/temperature/current",sz);
     dtostrf(humidityRH, 4, 2, sz);
     client.publish("hvac/humidity/current",sz);
-    doc["v_l1"] = vA;
-    doc["v_l2"] = vB;
-    doc["i_l1"] = iA;
-    doc["i_l2"] = iB;
-    doc["p_l1"] = pA;
-    doc["p_l2"] = pB;
-    doc["e_l1"] = eA;
-    doc["e_l2"] = eB;
-    JsonArray data = doc.createNestedArray("data");
-    serializeJson(doc, sz);
-    client.publish("power/stats",sz);
     if (digitalRead(PIN_LIGHTS_SENSE) == HIGH) {
         client.publish("shop/switch/lights1","ON");
     } else {
