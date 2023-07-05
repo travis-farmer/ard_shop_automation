@@ -5,9 +5,14 @@
 #include <Adafruit_MCP23X17.h>
 #include <PZEM004T.h>
 #include <ArduinoJson.h>
-#define PIN_HEAT 0
-#define PIN_COOL 1
-
+#define MCP_HEAT 0
+#define MCP_COOL 1
+#define MCP_LIGHTS 2
+#define MCP_COMP 3
+#define PIN_EXSW_LIGHTS 23
+#define PIN_LIGHTS_SENSE 24
+#define PIN_EXSW_COMP 25
+#define PIN_COMP_SENSE 26
 
 
 PZEM004T* pzemA;
@@ -34,12 +39,18 @@ float humidityRH = 0.00;
 unsigned long lastTimer = 0UL;
 bool stateHeating = false;
 bool stateCooling = false;
+bool stateLights1 = false;
+bool stateComp1 = false;
 unsigned long coolTimer = 0UL;
+String setLights1 = "";
+String setComp1 = "";
 
 boolean reconnect() {
   if (client.connect("arduinoClient", "mqtt_devices", "10994036")) {
     client.subscribe("hvac/mode/set");
     client.subscribe("hvac/temperature/set");
+    client.subscribe("shop/switch/lights1/set");
+    client.subscribe("shop/switch/comp1");
 
   }
   return client.connected();
@@ -55,6 +66,8 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
   if (tmpTopic == "hvac/mode/set") {setMode = tmpStr; }
   else if (tmpTopic == "hvac/temperature/set") { setTemp = atoi(tmpStr); }
+  else if (tmpTopic == "shop/switch/lights1/set") { setLights1 = tmpStr; }
+  else if (tmpTopic == "shop/switch/comp1/set") { setComp1 = tmpStr; }
 
 }
 
@@ -131,6 +144,27 @@ void loop() {
     float eB = pzemB->energy(ip);
 
 
+    /** \brief handle switches
+     *
+     *
+     */
+    if (setLights1 == "ON" && digitalRead(PIN_LIGHTS_SENSE) == LOW) {
+        stateLights1 = !stateLights1;
+        mcp.digitalWrite(MCP_LIGHTS, stateLights1);
+    } else if (setLights1 == "OFF" && digitalRead(PIN_LIGHTS_SENSE) == HIGH) {
+        stateLights1 = !stateLights1;
+        mcp.digitalWrite(MCP_LIGHTS, stateLights1);
+    }
+
+    if (setComp1 == "ON" && digitalRead(PIN_COMP_SENSE) == LOW) {
+        stateComp1 = !stateComp1;
+        mcp.digitalWrite(MCP_COMP, stateComp1);
+    } else if (setComp1 == "OFF" && digitalRead(PIN_COMP_SENSE) == HIGH) {
+        stateComp1 = !stateComp1;
+        mcp.digitalWrite(MCP_COMP, stateComp1);
+    }
+
+
     /** \brief handle thermostat
      *
      *
@@ -147,10 +181,10 @@ void loop() {
         if (tempF <= setTemp - 1) {stateCooling = false;}
         else if (tempF >= setTemp + 2) {stateCooling = true;}
     }
-    if (stateHeating == true) {mcp.digitalWrite(PIN_HEAT, HIGH);}
-    else {mcp.digitalWrite(PIN_HEAT, LOW);}
-    if (stateCooling == true && millis() - coolTimer > 10000) {coolTimer = millis(); mcp.digitalWrite(PIN_COOL, HIGH);}
-    else {mcp.digitalWrite(PIN_COOL, LOW);}
+    if (stateHeating == true) {mcp.digitalWrite(MCP_HEAT, HIGH);}
+    else {mcp.digitalWrite(MCP_HEAT, LOW);}
+    if (stateCooling == true && millis() - coolTimer > 10000) {coolTimer = millis(); mcp.digitalWrite(MCP_COOL, HIGH);}
+    else {mcp.digitalWrite(MCP_COOL, LOW);}
 
     /** \brief setup and send values and states
      *
@@ -178,5 +212,15 @@ void loop() {
     JsonArray data = doc.createNestedArray("data");
     serializeJson(doc, sz);
     client.publish("power/stats",sz);
+    if (digitalRead(PIN_LIGHTS_SENSE) == HIGH) {
+        client.publish("shop/switch/lights1","ON");
+    } else {
+        client.publish("shop/switch/lights1","OFF");
+    }
+    if (digitalRead(PIN_COMP_SENSE) == HIGH) {
+        client.publish("shop/switch/comp1","ON");
+    } else {
+        client.publish("shop/switch/comp1","OFF");
+    }
   }
 }
