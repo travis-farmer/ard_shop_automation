@@ -4,18 +4,18 @@
 #include <PubSubClient.h>
 #include <Adafruit_MCP23X17.h>
 #include <ArduinoJson.h>
+#include <PZEM004T.h>
+
 #define MCP_HEAT 0
 #define MCP_COOL 1
 #define MCP_LIGHTS 2
 #define MCP_COMP 3
-#define PIN_EXSW_LIGHTS 23
-#define PIN_LIGHTS_SENSE 24
-#define PIN_EXSW_COMP 25
-#define PIN_COMP_SENSE 26
-
+#define ADC_COMP_PSI A0
 
 Adafruit_MCP23X17 mcp;
-DHTNEW mySensor(22);
+DHTNEW mySensor(48);
+PZEM004T* pzemA;
+PZEM004T* pzemB;
 
 // Update these with values suitable for your hardware/network.
 byte mac[]    = {  0xDE, 0xED, 0xBA, 0xFE, 0xFE, 0xBE };
@@ -97,6 +97,10 @@ void setup() {
     mcp.digitalWrite(i, LOW);
   }
 
+  pzemA = new PZEM004T(&Serial1);
+  pzemA->setAddress(ip);
+  pzemB = new PZEM004T(&Serial2);
+  pzemB->setAddress(ip);
 }
 
 void loop() {
@@ -124,26 +128,32 @@ void loop() {
     int chk = mySensor.read();
     humidityRH = mySensor.getHumidity();
     tempF = ((mySensor.getTemperature() * 1.80) + 32.00);
+    float adcCompPsiVolts = ((5.00/1024)*analogRead(ADC_COMP_PSI));
+    float adcCompPsi = map(adcCompPsiVolts,0.50,4.50,0,150);
 
+    float vA = pzemA->voltage(ip);
+    float iA = pzemA->current(ip);
+    float pA = pzemA->power(ip);
+    float eA = pzemA->energy(ip);
+    float vB = pzemB->voltage(ip);
+    float iB = pzemB->current(ip);
+    float pB = pzemB->power(ip);
+    float eB = pzemB->energy(ip);
 
     /** \brief handle switches
      *
      *
      */
-    if (setLights1 == "ON" && digitalRead(PIN_LIGHTS_SENSE) == LOW) {
-        stateLights1 = !stateLights1;
-        mcp.digitalWrite(MCP_LIGHTS, stateLights1);
-    } else if (setLights1 == "OFF" && digitalRead(PIN_LIGHTS_SENSE) == HIGH) {
-        stateLights1 = !stateLights1;
-        mcp.digitalWrite(MCP_LIGHTS, stateLights1);
+    if (setLights1 == "ON") {
+        mcp.digitalWrite(MCP_LIGHTS, HIGH);
+    } else if (setLights1 == "OFF") {
+        mcp.digitalWrite(MCP_LIGHTS, LOW);
     }
 
-    if (setComp1 == "ON" && digitalRead(PIN_COMP_SENSE) == LOW) {
-        stateComp1 = !stateComp1;
-        mcp.digitalWrite(MCP_COMP, stateComp1);
-    } else if (setComp1 == "OFF" && digitalRead(PIN_COMP_SENSE) == HIGH) {
-        stateComp1 = !stateComp1;
-        mcp.digitalWrite(MCP_COMP, stateComp1);
+    if (setComp1 == "ON") {
+        mcp.digitalWrite(MCP_COMP, HIGH);
+    } else if (setComp1 == "OFF") {
+        mcp.digitalWrite(MCP_COMP, LOW);
     }
 
 
@@ -183,15 +193,33 @@ void loop() {
     client.publish("hvac/temperature/current",sz);
     dtostrf(humidityRH, 4, 2, sz);
     client.publish("hvac/humidity/current",sz);
-    if (digitalRead(PIN_LIGHTS_SENSE) == HIGH) {
+    if (setLights1 == "ON") {
         client.publish("shop/switch/lights1","ON");
     } else {
         client.publish("shop/switch/lights1","OFF");
     }
-    if (digitalRead(PIN_COMP_SENSE) == HIGH) {
+    if (setComp1 == "ON") {
         client.publish("shop/switch/comp1","ON");
     } else {
         client.publish("shop/switch/comp1","OFF");
     }
+    dtostrf(adcCompPsi, 4, 2, sz);
+    client.publish("shop/sensor/comppsi1",sz);
+    dtostrf(vA, 4, 2, sz);
+    client.publish("shop/sensor/vA",sz);
+    dtostrf(iA, 4, 2, sz);
+    client.publish("shop/sensor/iA",sz);
+    dtostrf(pA, 4, 2, sz);
+    client.publish("shop/sensor/pA",sz);
+    dtostrf(eA, 4, 2, sz);
+    client.publish("shop/sensor/eA",sz);
+    dtostrf(vB, 4, 2, sz);
+    client.publish("shop/sensor/vB",sz);
+    dtostrf(iB, 4, 2, sz);
+    client.publish("shop/sensor/iB",sz);
+    dtostrf(pB, 4, 2, sz);
+    client.publish("shop/sensor/pB",sz);
+    dtostrf(eB, 4, 2, sz);
+    client.publish("shop/sensor/eB",sz);
   }
 }
