@@ -11,6 +11,8 @@
 #define MCP_LIGHTS 2
 #define MCP_COMP 3
 #define ADC_COMP_PSI A0
+#define PIN_EXSW_LIGHT1 22
+#define PIN_EXSW_COMP1 23
 
 Adafruit_MCP23X17 mcp;
 DHTNEW mySensor(48);
@@ -37,6 +39,10 @@ bool stateHeating = false;
 bool stateCooling = false;
 bool stateLights1 = false;
 bool stateComp1 = false;
+bool stateLights1SW = false;
+bool stateComp1SW = false;
+bool state_act_lights1 = false;
+bool state_act_comp1 = false;
 unsigned long coolTimer = 0UL;
 String setLights1 = "";
 String setComp1 = "";
@@ -101,6 +107,9 @@ void setup() {
   pzemA->setAddress(ip);
   pzemB = new PZEM004T(&Serial2);
   pzemB->setAddress(ip);
+
+  pinMode(PIN_EXSW_LIGHT1,INPUT_PULLUP);
+  pinMode(PIN_EXSW_COMP1,INPUT_PULLUP);
 }
 
 void loop() {
@@ -144,18 +153,41 @@ void loop() {
      *
      *
      */
-    if (setLights1 == "ON") {
-        mcp.digitalWrite(MCP_LIGHTS, HIGH);
-    } else if (setLights1 == "OFF") {
-        mcp.digitalWrite(MCP_LIGHTS, LOW);
+    if (setLights1 == "ON" && state_act_lights1 == false) {
+        stateLights1 = !stateLights1;
+    } else if (setLights1 == "OFF" && state_act_lights1 == true) {
+        stateLights1 = !stateLights1;
+    }
+    if (digitalRead(PIN_EXSW_LIGHT1) == LOW && state_act_lights1 == false) {
+        stateLights1SW = !stateLights1SW;
+    } else if (digitalRead(PIN_EXSW_LIGHT1) == HIGH && state_act_lights1 == true) {
+        stateLights1SW = !stateLights1SW;
+    }
+    if (stateLights1 == stateLights1SW) {
+        mcp.digitalWrite(MCP_LIGHTS,HIGH);
+        state_act_lights1 = true;
+    } else {
+        mcp.digitalWrite(MCP_LIGHTS,LOW);
+        state_act_lights1 = false;
     }
 
-    if (setComp1 == "ON") {
-        mcp.digitalWrite(MCP_COMP, HIGH);
-    } else if (setComp1 == "OFF") {
-        mcp.digitalWrite(MCP_COMP, LOW);
+    if (setComp1 == "ON" && state_act_comp1 == false) {
+        stateComp1 = !stateComp1;
+    } else if (setComp1 == "OFF" && state_act_comp1 == true) {
+        stateComp1 = !stateComp1;
     }
-
+    if (digitalRead(PIN_EXSW_COMP1) == LOW && state_act_comp1 == false) {
+        stateComp1SW = !stateComp1SW;
+    } else if (digitalRead(PIN_EXSW_COMP1) == HIGH && state_act_comp1 == true) {
+        stateComp1SW = !stateComp1SW;
+    }
+    if (stateComp1 == stateComp1SW) {
+        mcp.digitalWrite(MCP_COMP,HIGH);
+        state_act_comp1 = true;
+    } else {
+        mcp.digitalWrite(MCP_COMP,LOW);
+        state_act_comp1 = false;
+    }
 
     /** \brief handle thermostat
      *
@@ -193,12 +225,12 @@ void loop() {
     client.publish("hvac/temperature/current",sz);
     dtostrf(humidityRH, 4, 2, sz);
     client.publish("hvac/humidity/current",sz);
-    if (setLights1 == "ON") {
+    if (state_act_lights1 == true) {
         client.publish("shop/switch/lights1","ON");
     } else {
         client.publish("shop/switch/lights1","OFF");
     }
-    if (setComp1 == "ON") {
+    if (state_act_comp1 == true) {
         client.publish("shop/switch/comp1","ON");
     } else {
         client.publish("shop/switch/comp1","OFF");
