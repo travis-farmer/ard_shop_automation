@@ -34,6 +34,7 @@ int setTemp = 0;
 String setMode = "";
 float tempF = 0.00;
 float humidityRH = 0.00;
+float thermostatHysteresis = 5.00;
 unsigned long lastTimer = 0UL;
 bool stateHeating = false;
 bool stateCooling = false;
@@ -198,12 +199,24 @@ void loop() {
         stateCooling = false;
     } else if (setMode == "heat") {
         stateCooling = false;
-        if (tempF >= setTemp + 1) {stateHeating = false;}
-        else if (tempF <= setTemp - 2) {stateHeating = true;}
+        if (tempF >= setTemp) {stateHeating = false;}
+        else if (tempF <= setTemp - thermostatHysteresis) {stateHeating = true;}
     } else if (setMode == "cool") {
         stateHeating = false;
-        if (tempF <= setTemp - 1) {stateCooling = false;}
-        else if (tempF >= setTemp + 2) {stateCooling = true;}
+        if (tempF <= setTemp) {stateCooling = false;}
+        else if (tempF >= setTemp + thermostatHysteresis) {stateCooling = true;}
+    } else if (setMode == "auto") {
+        if (tempF >= setTemp + thermostatHysteresis && stateHeating == false) {
+            stateHeating = false;
+            stateCooling = true;
+        } else if (tempF <= setTemp - thermostatHysteresis && stateCooling == false) {
+            stateCooling = false;
+            stateHeating = true;
+        } else if ((tempF >= setTemp && stateHeating == true) || (tempF <= setTemp && stateCooling == true)) {
+            stateCooling = false;
+            stateHeating = false;
+        }
+
     }
     if (stateHeating == true) {mcp.digitalWrite(MCP_HEAT, HIGH);}
     else {mcp.digitalWrite(MCP_HEAT, LOW);}
