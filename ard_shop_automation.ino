@@ -8,8 +8,9 @@
 
 #define MCP_HEAT 0
 #define MCP_COOL 1
-#define MCP_LIGHTS 2
-#define MCP_COMP 3
+#define MCP_FAN 2
+#define MCP_LIGHTS 3
+#define MCP_COMP 4
 #define ADC_COMP_PSI A0
 #define PIN_EXSW_LIGHT1 22
 #define PIN_EXSW_COMP1 23
@@ -38,6 +39,7 @@ float thermostatHysteresis = 5.00;
 unsigned long lastTimer = 0UL;
 bool stateHeating = false;
 bool stateCooling = false;
+bool stateFan = false;
 bool stateLights1 = false;
 bool stateComp1 = false;
 bool stateLights1SW = false;
@@ -220,8 +222,9 @@ void loop() {
     }
     if (stateHeating == true) {mcp.digitalWrite(MCP_HEAT, HIGH);}
     else {mcp.digitalWrite(MCP_HEAT, LOW);}
-    if (stateCooling == true && millis() - coolTimer > 10000) {coolTimer = millis(); mcp.digitalWrite(MCP_COOL, HIGH);}
-    else {mcp.digitalWrite(MCP_COOL, LOW);}
+    if (stateCooling == true && millis() - coolTimer < 10000 && stateFan == false) { mcp.digitalWrite(MCP_FAN, HIGH); stateFan = true; }
+    else if (stateCooling == true && millis() - coolTimer >= 10000) {coolTimer = millis(); mcp.digitalWrite(MCP_COOL, HIGH);}
+    else {mcp.digitalWrite(MCP_COOL, LOW); mcp.digtalWrite(MCP_FAN, LOW); stateFan == false;}
 
     /** \brief setup and send values and states
      *
