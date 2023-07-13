@@ -5,13 +5,11 @@
 #include <ArduinoJson.h>
 #include <PZEM004T.h>
 
-# --- Relay Pins from 30 to 46 --- #
 #define RELAY_HEAT 30
 #define RELAY_COOL 31
 #define RELAY_FAN 32
 #define RELAY_LIGHTS 33
 #define RELAY_COMP 34
-# --- End Relay Pin Definitions --- #
 
 #define ADC_COMP_PSI A0
 #define PIN_EXSW_LIGHT1 22
