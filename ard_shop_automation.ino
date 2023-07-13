@@ -2,6 +2,7 @@
 #include <SPI.h>
 #include <Ethernet.h>
 #include <PubSubClient.h>
+#include <Wire.h>
 #include <Adafruit_MCP23X17.h>
 #include <ArduinoJson.h>
 #include <PZEM004T.h>
@@ -51,7 +52,7 @@ String setLights1 = "";
 String setComp1 = "";
 
 boolean reconnect() {
-  if (client.connect("arduinoClient", "mqtt_devices", "10994036")) {
+  if (client.connect("arduinoClient")) {
     client.subscribe("hvac/mode/set");
     client.subscribe("hvac/temperature/set");
     client.subscribe("shop/switch/lights1/set");
@@ -79,7 +80,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
 void setup() {
   client.setServer(server, 1883);
   client.setCallback(callback);
-  mcp.begin_I2C();
+  mcp.begin_I2C(0x20);
  //Serial.println("Initialize Ethernet with DHCP:");
   if (Ethernet.begin(mac) == 0) {
     //Serial.println("Failed to configure Ethernet using DHCP");
@@ -224,7 +225,7 @@ void loop() {
     else {mcp.digitalWrite(MCP_HEAT, LOW);}
     if (stateCooling == true && millis() - coolTimer < 10000 && stateFan == false) { mcp.digitalWrite(MCP_FAN, HIGH); stateFan = true; }
     else if (stateCooling == true && millis() - coolTimer >= 10000) {coolTimer = millis(); mcp.digitalWrite(MCP_COOL, HIGH);}
-    else {mcp.digitalWrite(MCP_COOL, LOW); mcp.digtalWrite(MCP_FAN, LOW); stateFan == false;}
+    else {mcp.digitalWrite(MCP_COOL, LOW); mcp.digitalWrite(MCP_FAN, LOW); stateFan == false;}
 
     /** \brief setup and send values and states
      *
