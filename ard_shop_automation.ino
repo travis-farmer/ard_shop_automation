@@ -22,7 +22,7 @@ PZEM004T* pzemB;
 
 // Update these with values suitable for your hardware/network.
 byte mac[]    = {  0xDE, 0xED, 0xBA, 0xFE, 0xFE, 0xBE };
-IPAddress server(10, 150, 86, 199);
+IPAddress server(10, 150, 86, 196);
 IPAddress ip(192, 168, 0, 29);
 IPAddress myDns(192, 168, 0, 1);
 
