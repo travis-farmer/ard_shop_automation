@@ -34,7 +34,7 @@ int setTemp = 0;
 String setMode = "";
 float tempF = 0.00;
 float humidityRH = 0.00;
-float thermostatHysteresis = 5.00;
+float thermostatHysteresis = 3.00;
 unsigned long lastTimer = 0UL;
 bool stateHeating = false;
 bool stateCooling = false;
@@ -54,7 +54,7 @@ boolean reconnect() {
     client.subscribe("hvac/mode/set");
     client.subscribe("hvac/temperature/set");
     client.subscribe("shop/switch/lights1/set");
-    client.subscribe("shop/switch/comp1");
+    client.subscribe("shop/switch/comp1/set");
 
   }
   return client.connected();
@@ -141,30 +141,25 @@ void loop() {
     float adcCompPsiVolts = ((5.00/1024)*analogRead(ADC_COMP_PSI));
     float adcCompPsi = map(adcCompPsiVolts,0.50,4.50,0,150);
 
-    float vA = pzemA->voltage(ip);
+    /*float vA = pzemA->voltage(ip);
     float iA = pzemA->current(ip);
     float pA = pzemA->power(ip);
     float eA = pzemA->energy(ip);
     float vB = pzemB->voltage(ip);
     float iB = pzemB->current(ip);
     float pB = pzemB->power(ip);
-    float eB = pzemB->energy(ip);
+    float eB = pzemB->energy(ip);*/
 
     /** \brief handle switches
      *
      *
      */
     if (setLights1 == "ON" && state_act_lights1 == false) {
-        stateLights1 = !stateLights1;
+        stateLights1 = true;
     } else if (setLights1 == "OFF" && state_act_lights1 == true) {
-        stateLights1 = !stateLights1;
+        stateLights1 = false;
     }
-    if (digitalRead(PIN_EXSW_LIGHT1) == LOW && state_act_lights1 == false) {
-        stateLights1SW = !stateLights1SW;
-    } else if (digitalRead(PIN_EXSW_LIGHT1) == HIGH && state_act_lights1 == true) {
-        stateLights1SW = !stateLights1SW;
-    }
-    if (stateLights1 == stateLights1SW) {
+    if (stateLights1 == true) {
         digitalWrite(RELAY_LIGHTS,LOW);
         state_act_lights1 = true;
     } else {
@@ -173,16 +168,11 @@ void loop() {
     }
 
     if (setComp1 == "ON" && state_act_comp1 == false) {
-        stateComp1 = !stateComp1;
+        stateComp1 = true;
     } else if (setComp1 == "OFF" && state_act_comp1 == true) {
-        stateComp1 = !stateComp1;
+        stateComp1 = false;
     }
-    if (digitalRead(PIN_EXSW_COMP1) == LOW && state_act_comp1 == false) {
-        stateComp1SW = !stateComp1SW;
-    } else if (digitalRead(PIN_EXSW_COMP1) == HIGH && state_act_comp1 == true) {
-        stateComp1SW = !stateComp1SW;
-    }
-    if (stateComp1 == stateComp1SW) {
+    if (stateComp1 == true) {
         digitalWrite(RELAY_COMP,LOW);
         state_act_comp1 = true;
     } else {
@@ -206,10 +196,10 @@ void loop() {
         if (tempF <= setTemp) {stateCooling = false;}
         else if (tempF >= setTemp + thermostatHysteresis) {stateCooling = true;}
     } else if (setMode == "auto") {
-        if (tempF >= setTemp + thermostatHysteresis && stateHeating == false) {
-            stateHeating = false;
+        if (tempF >= setTemp + thermostatHysteresis && stateCooling == false) {
             stateCooling = true;
-        } else if (tempF <= setTemp - thermostatHysteresis && stateCooling == false) {
+            stateHeating = false;
+        } else if (tempF <= setTemp - thermostatHysteresis && stateHeating == false) {
             stateCooling = false;
             stateHeating = true;
         } else if ((tempF >= setTemp && stateHeating == true) || (tempF <= setTemp && stateCooling == true)) {
@@ -251,7 +241,7 @@ void loop() {
     }
     dtostrf(adcCompPsi, 4, 2, sz);
     client.publish("shop/sensor/comppsi1",sz);
-    dtostrf(vA, 4, 2, sz);
+    /*dtostrf(vA, 4, 2, sz);
     client.publish("shop/sensor/vA",sz);
     dtostrf(iA, 4, 2, sz);
     client.publish("shop/sensor/iA",sz);
@@ -266,6 +256,6 @@ void loop() {
     dtostrf(pB, 4, 2, sz);
     client.publish("shop/sensor/pB",sz);
     dtostrf(eB, 4, 2, sz);
-    client.publish("shop/sensor/eB",sz);
+    client.publish("shop/sensor/eB",sz);*/
   }
 }
