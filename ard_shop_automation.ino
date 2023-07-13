@@ -2,21 +2,21 @@
 #include <SPI.h>
 #include <Ethernet.h>
 #include <PubSubClient.h>
-#include <Wire.h>
-#include <Adafruit_MCP23X17.h>
 #include <ArduinoJson.h>
 #include <PZEM004T.h>
 
-#define MCP_HEAT 0
-#define MCP_COOL 1
-#define MCP_FAN 2
-#define MCP_LIGHTS 3
-#define MCP_COMP 4
+# --- Relay Pins from 30 to 46 --- #
+#define RELAY_HEAT 30
+#define RELAY_COOL 31
+#define RELAY_FAN 32
+#define RELAY_LIGHTS 33
+#define RELAY_COMP 34
+# --- End Relay Pin Definitions --- #
+
 #define ADC_COMP_PSI A0
 #define PIN_EXSW_LIGHT1 22
 #define PIN_EXSW_COMP1 23
 
-Adafruit_MCP23X17 mcp;
 DHTNEW mySensor(48);
 PZEM004T* pzemA;
 PZEM004T* pzemB;
@@ -80,7 +80,6 @@ void callback(char* topic, byte* payload, unsigned int length) {
 void setup() {
   client.setServer(server, 1883);
   client.setCallback(callback);
-  mcp.begin_I2C(0x20);
  //Serial.println("Initialize Ethernet with DHCP:");
   if (Ethernet.begin(mac) == 0) {
     //Serial.println("Failed to configure Ethernet using DHCP");
@@ -102,9 +101,9 @@ void setup() {
   delay(1500);
   lastReconnectAttempt = 0;
 
-  for (int i=0; i<= 15; i++) {
-    mcp.pinMode(i, OUTPUT);
-    mcp.digitalWrite(i, LOW);
+  for (int i=30; i<= 46; i++) {
+    pinMode(i, OUTPUT);
+    digitalWrite(i, HIGH); // Relays are active with a LOW signal
   }
 
   pzemA = new PZEM004T(&Serial1);
@@ -168,10 +167,10 @@ void loop() {
         stateLights1SW = !stateLights1SW;
     }
     if (stateLights1 == stateLights1SW) {
-        mcp.digitalWrite(MCP_LIGHTS,HIGH);
+        digitalWrite(RELAY_LIGHTS,LOW);
         state_act_lights1 = true;
     } else {
-        mcp.digitalWrite(MCP_LIGHTS,LOW);
+        digitalWrite(RELAY_LIGHTS,HIGH);
         state_act_lights1 = false;
     }
 
@@ -186,10 +185,10 @@ void loop() {
         stateComp1SW = !stateComp1SW;
     }
     if (stateComp1 == stateComp1SW) {
-        mcp.digitalWrite(MCP_COMP,HIGH);
+        digitalWrite(RELAY_COMP,LOW);
         state_act_comp1 = true;
     } else {
-        mcp.digitalWrite(MCP_COMP,LOW);
+        digitalWrite(RELAY_COMP,HIGH);
         state_act_comp1 = false;
     }
 
@@ -221,11 +220,11 @@ void loop() {
         }
 
     }
-    if (stateHeating == true) {mcp.digitalWrite(MCP_HEAT, HIGH);}
-    else {mcp.digitalWrite(MCP_HEAT, LOW);}
-    if (stateCooling == true && millis() - coolTimer < 10000 && stateFan == false) { mcp.digitalWrite(MCP_FAN, HIGH); stateFan = true; }
-    else if (stateCooling == true && millis() - coolTimer >= 10000) {coolTimer = millis(); mcp.digitalWrite(MCP_COOL, HIGH);}
-    else {mcp.digitalWrite(MCP_COOL, LOW); mcp.digitalWrite(MCP_FAN, LOW); stateFan == false;}
+    if (stateHeating == true) {digitalWrite(RELAY_HEAT, HIGH);}
+    else {digitalWrite(RELAY_HEAT, LOW);}
+    if (stateCooling == true && millis() - coolTimer < 10000 && stateFan == false) { digitalWrite(RELAY_FAN, HIGH); stateFan = true; }
+    else if (stateCooling == true && millis() - coolTimer >= 10000) {coolTimer = millis(); digitalWrite(RELAY_COOL, HIGH);}
+    else {digitalWrite(RELAY_COOL, LOW); digitalWrite(RELAY_FAN, LOW); stateFan == false;}
 
     /** \brief setup and send values and states
      *
