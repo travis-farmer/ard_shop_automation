@@ -4,18 +4,17 @@
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 #include <PZEM004T.h>
-#include <Adafruit_MCP23X17.h>
-#define RELAY_HEAT 0
-#define RELAY_COOL 1
-#define RELAY_FAN 2
-#define RELAY_LIGHTS 3
-#define RELAY_COMP 4
+
+#define RELAY_HEAT 30
+#define RELAY_COOL 31
+#define RELAY_FAN 32
+#define RELAY_LIGHTS 33
+#define RELAY_COMP 34
 
 #define ADC_COMP_PSI A0
 #define STATE_LIGHTS 22
 #define STATE_COMP 23
 
-Adafruit_MCP23X17 mcp;
 DHTNEW mySensor(48);
 PZEM004T* pzemA;
 PZEM004T* pzemB;
@@ -40,6 +39,7 @@ unsigned long lastTimer = 0UL;
 bool stateHeating = false;
 bool stateCooling = false;
 bool stateFan = false;
+bool stateCool = false;
 bool stateLights1 = false;
 bool stateComp1 = false;
 bool stateLights1SW = false;
@@ -79,7 +79,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
 void setup() {
   client.setServer(server, 1883);
   client.setCallback(callback);
-  mcp.begin_I2C(0x20);
+
  //Serial.println("Initialize Ethernet with DHCP:");
   if (Ethernet.begin(mac) == 0) {
     //Serial.println("Failed to configure Ethernet using DHCP");
@@ -106,9 +106,9 @@ void setup() {
     digitalWrite(i, HIGH); // Relays are active with a LOW signal
   }*/
 
-  for (int i = 0; i <= 15; i++) {
-    mcp.pinMode(i, OUTPUT);
-    mcp.digitalWrite(i,LOW);
+  for (int i = 30; i <= 34; i++) {
+    pinMode(i, OUTPUT);
+    digitalWrite(i,HIGH);
   }
 
   pzemA = new PZEM004T(&Serial1);
@@ -167,10 +167,10 @@ void loop() {
         stateLights1 = false;
     }
     if (stateLights1 == true) {
-        mcp.digitalWrite(RELAY_LIGHTS,LOW);
+        digitalWrite(RELAY_LIGHTS,LOW);
         state_act_lights1 = true;
     } else {
-        mcp.digitalWrite(RELAY_LIGHTS,HIGH);
+        digitalWrite(RELAY_LIGHTS,HIGH);
         state_act_lights1 = false;
     }
 
@@ -180,10 +180,10 @@ void loop() {
         stateComp1 = false;
     }
     if (stateComp1 == true) {
-        mcp.digitalWrite(RELAY_COMP,LOW);
+        digitalWrite(RELAY_COMP,LOW);
         state_act_comp1 = true;
     } else {
-        mcp.digitalWrite(RELAY_COMP,HIGH);
+        digitalWrite(RELAY_COMP,HIGH);
         state_act_comp1 = false;
     }
 
@@ -215,11 +215,11 @@ void loop() {
         }
 
     }
-    if (stateHeating == true) {mcp.digitalWrite(RELAY_HEAT, HIGH);}
-    else {mcp.digitalWrite(RELAY_HEAT, LOW);}
-    if (stateCooling == true && millis() - coolTimer < 10000 && stateFan == false) { mcp.digitalWrite(RELAY_FAN, HIGH); stateFan = true; }
-    else if (stateCooling == true && millis() - coolTimer >= 10000) {coolTimer = millis(); mcp.digitalWrite(RELAY_COOL, HIGH);}
-    else {mcp.digitalWrite(RELAY_COOL, LOW); mcp.digitalWrite(RELAY_FAN, LOW); stateFan == false;}
+    if (stateHeating == true) {digitalWrite(RELAY_HEAT, LOW);}
+    else {digitalWrite(RELAY_HEAT, HIGH);}
+    if (stateCooling == true && stateFan == false && stateCool == false) { digitalWrite(RELAY_FAN, LOW); stateFan = true; }
+    else if (stateCooling == true && millis() - coolTimer >= 10000 && stateFan == true && stateCool == false) {stateCool = true; coolTimer = millis(); digitalWrite(RELAY_COOL, LOW);}
+    else if(stateCooling == false) {digitalWrite(RELAY_COOL, HIGH); digitalWrite(RELAY_FAN, HIGH); stateFan = false; stateCool = false;}
 
     /** \brief setup and send values and states
      *
@@ -246,12 +246,12 @@ void loop() {
     } else {
         client.publish("shop/switch/comp1","OFF");
     }
-    if (digitalRead(STATE_LIGHTS) == LOW) {
+    if (digitalRead(STATE_LIGHTS) == HIGH) {
         client.publish("shop/switch/lights1/state","ON");
     } else {
         client.publish("shop/switch/lights1/state","OFF");
     }
-    if (digitalRead(STATE_COMP) == LOW) {
+    if (digitalRead(STATE_COMP) == HIGH) {
         client.publish("shop/switch/comp1/state","ON");
     } else {
         client.publish("shop/switch/comp1/state","OFF");
