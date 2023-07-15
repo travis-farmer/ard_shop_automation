@@ -218,7 +218,7 @@ void loop() {
     if (stateHeating == true) {digitalWrite(RELAY_HEAT, LOW);}
     else {digitalWrite(RELAY_HEAT, HIGH);}
     if (stateCooling == true && stateFan == false && stateCool == false) { digitalWrite(RELAY_FAN, LOW); stateFan = true; }
-    else if (stateCooling == true && millis() - coolTimer >= 10000 && stateFan == true && stateCool == false) {stateCool = true; coolTimer = millis(); digitalWrite(RELAY_COOL, LOW);}
+    else if (stateCooling == true && millis() - coolTimer >= 30000 && stateFan == true && stateCool == false) {stateCool = true; coolTimer = millis(); digitalWrite(RELAY_COOL, LOW);}
     else if(stateCooling == false) {digitalWrite(RELAY_COOL, HIGH); digitalWrite(RELAY_FAN, HIGH); stateFan = false; stateCool = false;}
 
     /** \brief setup and send values and states
