@@ -8,12 +8,12 @@
 #define RELAY_HEAT 30
 #define RELAY_COOL 31
 #define RELAY_FAN 32
-#define RELAY_LIGHTS 33
-#define RELAY_COMP 34
+#define RELAY_LIGHTS 2
+#define RELAY_COMP 3
 
 #define ADC_COMP_PSI A0
-#define STATE_LIGHTS 22
-#define STATE_COMP 23
+#define SWITCH_LIGHTS 22
+#define SWITCH_COMP 23
 
 DHTNEW mySensor(48);
 PZEM004T* pzemA;
@@ -110,14 +110,18 @@ void setup() {
     pinMode(i, OUTPUT);
     digitalWrite(i,HIGH);
   }
+  pinMode(RELAY_LIGHTS,OUTPUT);
+  digitalWrite(RELAY_LIGHTS,LOW);
+  pinMode(RELAY_COMP,OUTPUT);
+  digitalWrite(RELAY_COMP,LOW);
 
   pzemA = new PZEM004T(&Serial1);
   pzemA->setAddress(ip);
   pzemB = new PZEM004T(&Serial2);
   pzemB->setAddress(ip);
 
-  pinMode(STATE_LIGHTS,INPUT);
-  pinMode(STATE_COMP,INPUT);
+  pinMode(SWITCH_LIGHTS,INPUT_PULLUP);
+  pinMode(SWITCH_COMP,INPUT_PULLUP);
 }
 
 void loop() {
@@ -161,29 +165,33 @@ void loop() {
      *
      *
      */
-    if (setLights1 == "ON" && state_act_lights1 == false) {
+    if (setLights1 == "ON") {
         stateLights1 = true;
-    } else if (setLights1 == "OFF" && state_act_lights1 == true) {
+    } else if (setLights1 == "OFF") {
         stateLights1 = false;
     }
-    if (stateLights1 == true) {
-        digitalWrite(RELAY_LIGHTS,LOW);
+    if (digitalRead(SWITCH_LIGHTS) == HIGH) {stateLights1SW = true;}
+    else {stateLights1SW = false;}
+    if (stateLights1 == stateLights1SW) {
+        digitalWrite(RELAY_LIGHTS,HIGH);
         state_act_lights1 = true;
     } else {
-        digitalWrite(RELAY_LIGHTS,HIGH);
+        digitalWrite(RELAY_LIGHTS,LOW);
         state_act_lights1 = false;
     }
 
-    if (setComp1 == "ON" && state_act_comp1 == false) {
+    if (setComp1 == "ON") {
         stateComp1 = true;
-    } else if (setComp1 == "OFF" && state_act_comp1 == true) {
+    } else if (setComp1 == "OFF") {
         stateComp1 = false;
     }
-    if (stateComp1 == true) {
-        digitalWrite(RELAY_COMP,LOW);
+    if (digitalRead(SWITCH_COMP) == HIGH) {stateComp1SW = true;}
+    else {stateComp1SW = false;}
+    if (stateComp1 == stateComp1SW) {
+        digitalWrite(RELAY_COMP,HIGH);
         state_act_comp1 = true;
     } else {
-        digitalWrite(RELAY_COMP,HIGH);
+        digitalWrite(RELAY_COMP,LOW);
         state_act_comp1 = false;
     }
 
@@ -246,12 +254,12 @@ void loop() {
     } else {
         client.publish("shop/switch/comp1","OFF");
     }
-    if (digitalRead(STATE_LIGHTS) == HIGH) {
+    if (state_act_lights1 == true) {
         client.publish("shop/switch/lights1/state","ON");
     } else {
         client.publish("shop/switch/lights1/state","OFF");
     }
-    if (digitalRead(STATE_COMP) == HIGH) {
+    if (state_act_comp1 == true) {
         client.publish("shop/switch/comp1/state","ON");
     } else {
         client.publish("shop/switch/comp1/state","OFF");
