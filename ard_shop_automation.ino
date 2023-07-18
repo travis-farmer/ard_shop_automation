@@ -21,7 +21,7 @@ PZEM004T* pzemB;
 
 // Update these with values suitable for your hardware/network.
 byte mac[]    = {  0xDE, 0xED, 0xBA, 0xFE, 0xFE, 0xBE };
-IPAddress server(10, 150, 86, 196);
+IPAddress server(192, 168, 1, 100);
 IPAddress ip(192, 168, 0, 29);
 IPAddress myDns(192, 168, 0, 1);
 
@@ -51,7 +51,7 @@ String setLights1 = "";
 String setComp1 = "";
 
 boolean reconnect() {
-  if (client.connect("arduinoClient")) {
+  if (client.connect("ArduinoShop")) {
     client.subscribe("hvac/mode/set");
     client.subscribe("hvac/temperature/set");
     client.subscribe("shop/switch/lights1/set");
